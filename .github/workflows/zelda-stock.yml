@@ -3,6 +3,7 @@ name: Zelda Switch 2 Stock Checker
 on:
   schedule:
     - cron: "*/5 * * * *"
+
   workflow_dispatch:
 
 jobs:
@@ -21,6 +22,20 @@ jobs:
           npm install playwright
           npx playwright install --with-deps chromium
 
+      # This runs ONLY when you manually click "Run workflow".
+      # It does NOT run during the automatic 5-minute checks.
+      - name: Test phone notification
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          curl \
+            -H "Title: Zelda Stock Monitor Test" \
+            -H "Priority: high" \
+            -H "Tags: video_game" \
+            -d "Your Zelda stock alerts are working." \
+            "https://ntfy.sh/$NTFY_TOPIC"
+
       - name: Check Nintendo stock
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
@@ -32,7 +47,9 @@ jobs:
             "https://www.nintendo.com/us/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/";
 
           (async () => {
-            const browser = await chromium.launch({ headless: true });
+            const browser = await chromium.launch({
+              headless: true,
+            });
 
             const page = await browser.newPage({
               userAgent:
@@ -40,6 +57,7 @@ jobs:
             });
 
             console.log("Opening Nintendo...");
+
             await page.goto(url, {
               waitUntil: "domcontentloaded",
               timeout: 60000,
@@ -69,20 +87,22 @@ jobs:
                 }))
               );
 
-            console.log(
-              "Relevant controls:",
-              buttons
-                .filter((b) =>
-                  /cart|order|buy|purchase|retailer|sold/i.test(b.text)
-                )
-                .slice(0, 30)
-            );
+            const relevantControls = buttons
+              .filter((b) =>
+                /cart|order|buy|purchase|retailer|sold/i.test(b.text)
+              )
+              .slice(0, 30);
+
+            console.log("Relevant controls:", relevantControls);
 
             const activePurchaseControl = buttons.find(
-              (b) => purchaseRegex.test(b.text) && !b.disabled
+              (b) =>
+                purchaseRegex.test(b.text) &&
+                !b.disabled
             );
 
-            const unavailable = unavailableRegex.test(bodyText);
+            const unavailable =
+              unavailableRegex.test(bodyText);
 
             if (activePurchaseControl && !unavailable) {
               console.log(
@@ -113,7 +133,7 @@ jobs:
                 );
               }
 
-              console.log("Phone notification sent!");
+              console.log("🚨 Phone notification sent!");
             } else {
               console.log("Still unavailable.");
             }
