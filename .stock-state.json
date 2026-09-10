@@ -1,0 +1,12 @@
+{
+  "zelda-switch-2": {
+    "inStock": false,
+    "firstSeenAt": null,
+    "remindersSent": []
+  },
+  "zelda-pro-controller": {
+    "inStock": false,
+    "firstSeenAt": null,
+    "remindersSent": []
+  }
+}
